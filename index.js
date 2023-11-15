@@ -6,10 +6,14 @@ const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+    origin: [
+        "http://localhost:5173",
 
-// 
-//
+    ],
+    credentials: true
+}));
+
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASSWORD}@cluster0.evacz3b.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -27,7 +31,40 @@ async function run() {
     await client.connect();
     // Send a ping to confirm a successful connection
 
+    const menuCollection = client.db("bistroBossDB").collection("menuCollection");
+    const reviewCollection = client.db("bistroBossDB").collection("reviewCollection");
+    const cartsCollection = client.db("bistroBossDB").collection("cartsCollection");
 
+
+    app.post("/api/v1/carts", async (req, res) => {
+      try{  
+        const data = req.body;
+        const result = await cartsCollection.insertOne(data);
+
+        res.send(result);
+
+      } catch(err){
+        console.log(err.message);
+      }
+    })
+
+    app.get("/api/v1/menus", async (req, res) => {
+        try{
+            const result = await menuCollection.find().toArray();
+            res.send(result);
+        } catch(err) {
+            console.log(err.message);
+        }
+    })
+
+    app.get("/api/v1/reviews", async (req, res) => {
+        try{
+            const result = await reviewCollection.find().toArray();
+            res.send(result);
+        } catch(err) {
+            console.log(err.message);
+        }
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
