@@ -3,7 +3,7 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 app.use(express.json());
 app.use(cors({
@@ -43,6 +43,19 @@ async function run() {
 
         const result = await cartsCollection.find(query).toArray();
         res.send(result); 
+
+      } catch(err) {
+        console.log(err.message);
+      }
+    })
+
+    app.delete("/api/v1/carts/:id", async(req, res) => {
+      try{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+
+        const result = await cartsCollection.deleteOne(query);
+        res.send(result);
 
       } catch(err) {
         console.log(err.message);
