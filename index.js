@@ -36,6 +36,19 @@ async function run() {
     const cartsCollection = client.db("bistroBossDB").collection("cartsCollection");
 
 
+    app.get("/api/v1/cart", async (req, res) => {
+      try{
+
+        const query = {userId : req.query.userId};
+
+        const result = await cartsCollection.find(query).toArray();
+        res.send(result); 
+
+      } catch(err) {
+        console.log(err.message);
+      }
+    })
+
     app.post("/api/v1/carts", async (req, res) => {
       try{  
         const data = req.body;
