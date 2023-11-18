@@ -30,16 +30,49 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     // Send a ping to confirm a successful connection
-
+    const userCollection = client.db("bistroBossDB").collection("userCollection");
     const menuCollection = client.db("bistroBossDB").collection("menuCollection");
     const reviewCollection = client.db("bistroBossDB").collection("reviewCollection");
     const cartsCollection = client.db("bistroBossDB").collection("cartsCollection");
 
+// user related api methods
+    app.post("/api/v1/users", async (req, res) => {
+      try{
+        const userInfo = req.body;
+        
+        const query = {email : userInfo.email};
 
+        const isExist = await userCollection.findOne(query);
+        
+        if(isExist) {
+          return res.send({message: "User already exists"});
+        }
+
+        const result = await userCollection.insertOne(userInfo);
+        res.send(result);
+
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
+    app.get("/api/v1/user", async (req, res) => {
+      try{
+        const query = {email: req.query.email};
+        const result = await userCollection.findOne(query);
+
+        res.send(result);
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
+
+// recipe related api methods
     app.get("/api/v1/cart", async (req, res) => {
       try{
 
-        const query = {userId : req.query.userId};
+        const query = {userEmail : req.query.userEmail};
 
         const result = await cartsCollection.find(query).toArray();
         res.send(result); 
