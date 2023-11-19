@@ -39,8 +39,35 @@ async function run() {
     // middlewares
 
     const verifyToken = (req, res, next) => {
+      console.log("Inside verify token: ", req.headers.authorization);
 
+      if(!req.headers.authorization) {
+        return res.status(401).send({message: 'unauthorized access'});
+      }
+
+      const token = req.headers.authorization.split(' ')[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if(err) {
+          return res.status(401).send({message: 'unauthorized access'});
+        }
+
+        req.decoded = decoded;
+        next();
+      })
     };
+
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = {email: email};
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "Admin";
+
+      if(!isAdmin) {
+        return res.status(403).send({message: "forbidden access"});
+      }
+
+      next();
+    }
 
     // jwt related api methods
     app.post("/api/v1/jwt", async (req, res) => {
@@ -58,7 +85,7 @@ async function run() {
 
 
 // user related api methods
-    app.post("/api/v1/users", async (req, res) => {
+    app.post("/api/v1/users",async (req, res) => {
       try{
         const userInfo = req.body;
         
@@ -89,12 +116,14 @@ async function run() {
       }
     })
 
-
 // recipe related api methods
-    app.get("/api/v1/cart", async (req, res) => {
+    app.get("/api/v1/cart", verifyToken,async (req, res) => {
       try{
-
         const query = {userEmail : req.query.userEmail};
+       
+        if(query.userEmail !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
 
         const result = await cartsCollection.find(query).toArray();
         res.send(result); 
@@ -117,7 +146,7 @@ async function run() {
       }
     })
 
-    app.post("/api/v1/carts", async (req, res) => {
+    app.post("/api/v1/carts",async (req, res) => {
       try{  
         const data = req.body;
         const result = await cartsCollection.insertOne(data);
@@ -136,6 +165,25 @@ async function run() {
         } catch(err) {
             console.log(err.message);
         }
+    })
+
+    app.post("/api/v1/product", verifyToken, verifyAdmin,async (req, res) => {
+      try{
+        
+        let product = req.body;
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+        product.adminEmail = req.decoded.email;
+        console.log(product);
+
+        const result = await menuCollection.insertOne(product);
+        res.send(result);
+
+      } catch(err) {
+        console.log(err.message);
+      }
     })
 
     app.get("/api/v1/reviews", async (req, res) => {
