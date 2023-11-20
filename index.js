@@ -99,6 +99,21 @@ async function run() {
       }
     })
 
+    app.get("/api/v1/users", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+
+        const result = await userCollection.find().toArray();
+        res.send(result);
+
+      } catch {
+        console.log(err.message);
+      }
+    })
+
     app.get("/api/v1/user", async (req, res) => {
       try{
         const query = {email: req.query.email};
