@@ -126,6 +126,24 @@ async function run() {
       } catch (err) {
         console.log(err.message);
       }
+    });
+
+  
+    app.delete("/api/v1/added-items/:id",verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+
+        const result = await menuCollection.deleteOne(query);
+        res.send(result);
+
+      } catch (err) {
+        console.log(err.message);
+      }
     })
 
     app.get("/api/v1/cart", verifyToken,async (req, res) => {
