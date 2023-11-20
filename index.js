@@ -7,13 +7,7 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 app.use(express.json());
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-
-    ],
-    credentials: true
-}));
+app.use(cors());
 
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASSWORD}@cluster0.evacz3b.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -38,7 +32,7 @@ async function run() {
 
     // middlewares
 
-    const verifyToken = (req, res, next) => {
+    const verifyToken = async (req, res, next) => {
       console.log("Inside verify token: ", req.headers.authorization);
 
       if(!req.headers.authorization) {
@@ -72,7 +66,7 @@ async function run() {
     // jwt related api methods
     app.post("/api/v1/jwt", async (req, res) => {
       try{
-
+        console.log(req.body);
         const user = req.body;
         const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: "3h"} );
 
@@ -117,10 +111,27 @@ async function run() {
     })
 
 // recipe related api methods
+
+    app.get("/api/v1/added-items", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+
+        const query = {adminEmail: req.query.email};
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+
+        const result = await menuCollection.find(query).toArray();
+        res.send(result);
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
     app.get("/api/v1/cart", verifyToken,async (req, res) => {
       try{
         const query = {userEmail : req.query.userEmail};
-       
+
         if(query.userEmail !== req.decoded.email) {
           return res.status(403).send({message: "forbidden access"});
         }
@@ -171,7 +182,7 @@ async function run() {
       try{
         
         let product = req.body;
-
+        
         if(req.query.email !== req.decoded.email) {
           return res.status(403).send({message: "forbidden access"});
         }
