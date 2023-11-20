@@ -128,6 +128,46 @@ async function run() {
       }
     });
 
+    app.get("/api/v1/admin-addedItems/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)};
+
+        const result = await menuCollection.findOne(query);
+
+        res.send(result);
+
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
+    app.patch("/api/v1/update-item/:id", verifyToken, verifyAdmin, async (req, res) => {
+      try{
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+
+        const query = {_id: new ObjectId(req.params.id)};
+        const data = req.body;
+        const updatedDoc = {
+          $set: {
+            name: data.name,
+            recipe: data.recipe,
+            category: data.category,
+            price: data.price,
+          }
+        }
+
+        const result = await menuCollection.updateOne(query, updatedDoc);
+        res.send(result);
+
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
   
     app.delete("/api/v1/added-items/:id",verifyToken, verifyAdmin, async (req, res) => {
       try {
