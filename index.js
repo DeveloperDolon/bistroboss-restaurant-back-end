@@ -282,6 +282,45 @@ async function run() {
         }
     })
 
+    // stats or analytics
+
+    app.get("/api/v1/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).send({message: "forbidden access"});
+        }
+
+        const users = await userCollection.estimatedDocumentCount();
+        const menuItems = await menuCollection.estimatedDocumentCount();
+        const orders = await payments.estimatedDocumentCount();
+        // const payment = await payments.find().toArray();
+
+        // const revenue = payment.reduce((total, item) => total + item.price, 0);
+        const revenue = await payments.aggregate([
+          {
+            $group: {
+              _id: null,
+              totalRevenue: {
+                $sum: "$price"
+              }
+            }
+          }
+        ]).toArray();
+
+        const totalRevenue = revenue.length > 0 ? revenue[0].totalRevenue : 0;
+
+        res.send({
+          users,
+          menuItems,
+          orders,
+          totalRevenue
+        })
+      } catch (err) { 
+        console.log(err.message);
+      }
+    });
+
     // payment related apis
     app.post("/api/v1/payment", async (req, res) => {
       try {
