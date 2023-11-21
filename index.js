@@ -301,6 +301,22 @@ async function run() {
       }
     })
 
+    app.get("/api/v1/payments", verifyToken, async (req, res) => {
+      try {
+        const query = { email: req.query.email};
+    
+        if(req.query.email !== req.decoded.email) {
+          return res.status(403).status({message: "forbidden access"});
+        }
+
+        const result = await payments.find(query).toArray();
+
+        res.send(result);
+      } catch (err) {
+        console.log(err.message);
+      }
+    })
+
     app.post("/api/v1/create-payment-intent", async (req, res) => {
       try {
         const { price } = req.body;
