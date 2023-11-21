@@ -2,9 +2,10 @@ require('dotenv').config();
 const express = require("express");
 const app = express();
 const cors = require("cors");
-const port = process.env.PORT || 5000;
 const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const port = process.env.PORT || 5000;
 
 app.use(express.json());
 app.use(cors());
@@ -29,6 +30,7 @@ async function run() {
     const menuCollection = client.db("bistroBossDB").collection("menuCollection");
     const reviewCollection = client.db("bistroBossDB").collection("reviewCollection");
     const cartsCollection = client.db("bistroBossDB").collection("cartsCollection");
+    const payments = client.db("bistroBossDB").collection("paymentCollection");
 
     // middlewares
 
@@ -105,8 +107,9 @@ async function run() {
         if(req.query.email !== req.decoded.email) {
           return res.status(403).send({message: "forbidden access"});
         }
+        const filter = {email: {$ne: req.query.email}};
 
-        const result = await userCollection.find().toArray();
+        const result = await userCollection.find(filter).toArray();
         res.send(result);
 
       } catch {
@@ -278,6 +281,45 @@ async function run() {
             console.log(err.message);
         }
     })
+
+    // payment related apis
+    app.post("/api/v1/payment", async (req, res) => {
+      try {
+        const payment = req.body;
+        const paymentResult = await payments.insertOne(payment);
+
+        const query = {_id: {
+          $in: payment.cartIds.map(id => new ObjectId(id))
+        }}
+
+        const deleteManyOpe = await cartsCollection.deleteMany(query);
+
+        res.send({paymentResult, deleteManyOpe});
+
+      } catch(err) {
+        console.log(err.message);
+      }
+    })
+
+    app.post("/api/v1/create-payment-intent", async (req, res) => {
+      try {
+        const { price } = req.body;
+        
+        const amount = parseInt(price * 100);
+      // Create a PaymentIntent with the order amount and currency
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "inr",
+          payment_method_types: ['card'],
+        });
+    
+        res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      } catch(err) {
+        console.log(err.message);
+      }
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
